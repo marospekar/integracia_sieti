@@ -1,0 +1,27 @@
+heat_template_version: rocky
+
+parameters:
+  flavor:
+    type: string
+    label: Flavor
+    default: nano
+
+resources:
+  server1:
+    type: OS::Nova::Server
+    properties:
+      name: integracia13_vm1
+      image: cirros
+      flavor: { get_param: flavor }
+      networks:
+        - network: ext-net
+      availability_zone: compute1
+  server2:
+    type: OS::Nova::Server
+    properties:
+      name: integracia13_vm1
+      image: cirros
+      flavor: { get_param: flavor }
+      networks:
+        - network: ext-net
+      availability_zone: compute1
