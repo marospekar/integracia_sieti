@@ -1,0 +1,2 @@
+This is new file in custom branch "IS-vcs".
+I am ready to be commited.
