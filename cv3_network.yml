@@ -63,3 +63,19 @@ resources:
     properties:
       router: { get_resource: Router }
       port: { get_resource: RouterPort }
+      
+  Jump:
+    type: OS::Nova::Server
+    properties:
+      name: jump
+      availability_zone: compute1
+      flavor: linux
+      image: ubuntu_server_18.04_amd64_Openstack
+      user_data_update_policy: REPLACE
+      key_name: keypair13cv3
+      networks:
+        - subnet: { get_resource: PrivateSubnet }
+      user_data_format: RAW
+      user_data: |
+        #!/bin/bash
+        apt-get update -y
