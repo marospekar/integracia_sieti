@@ -74,8 +74,101 @@ resources:
       user_data_update_policy: REPLACE
       key_name: keypair13cv3
       networks:
-        - subnet: { get_resource: PrivateSubnet }
+        - port: { get_resource: JumpPort }
       user_data_format: RAW
       user_data: |
         #!/bin/bash
         apt-get update -y
+        
+  JumpPort:
+    type: OS::Neutron::Port
+    properties:
+      name: JumpPort
+      network: { get_resource: Net }
+      security_groups:
+        - { get_resource: SecurityGrupaJump }
+      
+  JumpFloatingIp:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: ext-net
+      
+  JumpFloatingIpAssoc:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: JumpFloatingIp }
+      port_id: { get_resource: JumpPort }
+
+  SecurityGrupaJump:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: securityGrupa
+      rules: [
+        { direction: ingress, ethertype: IPv4, protocol: tcp, port_range_min: 22, port_range_max: 22, remote_ip_prefix: 158.193.0.0/16 },
+        { direction: ingress, ethertype: IPv4, protocol: icmp, remote_ip_prefix: 0.0.0.0/0 },
+       
+        { direction: egress, ethertype: IPv4, protocol: tcp, port_range_min: 1, port_range_max: 65535, remote_ip_prefix: 0.0.0.0/0 },
+        { direction: egress, ethertype: IPv4, protocol: udp, port_range_min: 1, port_range_max: 65535, remote_ip_prefix: 0.0.0.0/0 },
+       
+        { direction: egress, ethertype: IPv4, protocol: icmp, remote_ip_prefix: 0.0.0.0/0 }
+      ]
+
+  SecurityGrupaProxy:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: securityGrupa2
+      rules: [
+        { direction: ingress, ethertype: IPv4, remote_ip_prefix: 10.0.0.0/24 },
+       
+        { direction: egress, ethertype: IPv4, remote_ip_prefix: 0.0.0.0/0 }
+      ]
+      
+  ProxyPort:
+    type: OS::Neutron::Port
+    properties:
+      name: ProxyPort
+      network: { get_resource: Net }
+      security_groups:
+        - { get_resource: SecurityGrupaProxy }
+        
+  Proxy:
+    type: OS::Nova::Server
+    properties:
+      name: proxy
+      availability_zone: compute1
+      flavor: linux
+      image: ubuntu_server_18.04_amd64_Openstack
+      user_data_update_policy: REPLACE
+      key_name: keypair13cv3
+      networks:
+        - port: { get_resource: ProxyPort }
+      user_data_format: RAW
+      user_data: |
+        #!/bin/bash
+        apt-get update -y
+        apt install squid
+
+  ApachePort:
+    type: OS::Neutron::Port
+    properties:
+      name: ApachePort
+      network: { get_resource: Net }
+      security_groups:
+        - { get_resource: SecurityGrupaProxy }
+        
+  Apache:
+    type: OS::Nova::Server
+    properties:
+      name: apache
+      availability_zone: compute1
+      flavor: linux
+      image: ubuntu_server_18.04_amd64_Openstack
+      user_data_update_policy: REPLACE
+      key_name: keypair13cv3
+      networks:
+        - port: { get_resource: ApachePort }
+      user_data_format: RAW
+      user_data: |
+        #!/bin/bash
+        apt-get update -y
+        apt-get install apache2
