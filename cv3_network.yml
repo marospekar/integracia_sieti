@@ -104,7 +104,8 @@ resources:
     properties:
       name: securityGrupa
       rules: [
-        { direction: ingress, ethertype: IPv4, protocol: tcp, port_range_min: 22, port_range_max: 22, remote_ip_prefix: 158.193.0.0/16 },
+        { direction: ingress, ethertype: IPv4, protocol: tcp, port_range_min: 22, port_range_max: 22, remote_ip_prefix: 0.0.0.0/0 },
+        { direction: ingress, ethertype: IPv4, protocol: tcp, port_range_min: 80, port_range_max: 80, remote_ip_prefix: 0.0.0.0/0 },
         { direction: ingress, ethertype: IPv4, protocol: icmp, remote_ip_prefix: 0.0.0.0/0 },
        
         { direction: egress, ethertype: IPv4, protocol: tcp, port_range_min: 1, port_range_max: 65535, remote_ip_prefix: 0.0.0.0/0 },
@@ -113,13 +114,39 @@ resources:
         { direction: egress, ethertype: IPv4, protocol: icmp, remote_ip_prefix: 0.0.0.0/0 }
       ]
 
-  SecurityGrupaProxy:
+  SecurityGrupaApache:
     type: OS::Neutron::SecurityGroup
     properties:
       name: securityGrupa2
       rules: [
-        { direction: ingress, ethertype: IPv4, remote_ip_prefix: 10.0.0.0/24 },
+#        { direction: ingress, ethertype: IPv4, protocol: tcp, port_range_min: 22, port_range_max: 22, remote_ip_prefix: 10.0.0.0/24 },
+#        { direction: ingress, ethertype: IPv4, protocol: tcp, port_range_min: 80, port_range_max: 80, remote_ip_prefix: 10.0.0.0/24 },
+#        { direction: ingress, ethertype: IPv4, protocol: tcp, port_range_min: 443, port_range_max: 443, remote_ip_prefix: 10.0.0.0/24 },
+#        
+#        { direction: egress, ethertype: IPv4, protocol: tcp, port_range_min: 22, port_range_max: 22, remote_ip_prefix: 10.0.0.0/24 },
+#        { direction: egress, ethertype: IPv4, protocol: tcp, port_range_min: 80, port_range_max: 80, remote_ip_prefix: 10.0.0.0/24 },
+#        { direction: egress, ethertype: IPv4, protocol: tcp, port_range_min: 443, port_range_max: 443, remote_ip_prefix: 10.0.0.0/24 },
+        { direction: ingress, ethertype: IPv4, remote_ip_prefix: 0.0.0.0/0 },
+        { direction: ingress, ethertype: IPv4, protocol: tcp, port_range_min: 1, port_range_max: 65535, remote_ip_prefix: 0.0.0.0/0 },
        
+        { direction: egress, ethertype: IPv4, protocol: tcp, port_range_min: 1, port_range_max: 65535, remote_ip_prefix: 0.0.0.0/0 },
+        { direction: egress, ethertype: IPv4, remote_ip_prefix: 0.0.0.0/0 }
+      ]
+      
+  SecurityGrupaProxy:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: securityGrupa3
+      rules: [
+#        { direction: ingress, ethertype: IPv4, protocol: tcp, port_range_min: 22, port_range_max: 22, remote_ip_prefix: 10.0.0.0/24 },
+#        { direction: ingress, ethertype: IPv4, protocol: tcp, port_range_min: 3128, port_range_max: 3128, remote_ip_prefix: 10.0.0.0/24 },
+#        
+#        { direction: egress, ethertype: IPv4, protocol: tcp, port_range_min: 22, port_range_max: 22, remote_ip_prefix: 10.0.0.0/24 },
+#        { direction: egress, ethertype: IPv4, protocol: tcp, port_range_min: 3128, port_range_max: 3128, remote_ip_prefix: 10.0.0.0/24 },
+        { direction: ingress, ethertype: IPv4, remote_ip_prefix: 0.0.0.0/0 },
+        { direction: ingress, ethertype: IPv4, protocol: tcp, port_range_min: 1, port_range_max: 65535, remote_ip_prefix: 0.0.0.0/0 },
+       
+        { direction: egress, ethertype: IPv4, protocol: tcp, port_range_min: 1, port_range_max: 65535, remote_ip_prefix: 0.0.0.0/0 },
         { direction: egress, ethertype: IPv4, remote_ip_prefix: 0.0.0.0/0 }
       ]
       
@@ -146,7 +173,7 @@ resources:
       user_data: |
         #!/bin/bash
         apt-get update -y
-        apt install squid
+        apt install squid -y
 
   ApachePort:
     type: OS::Neutron::Port
@@ -154,7 +181,7 @@ resources:
       name: ApachePort
       network: { get_resource: Net }
       security_groups:
-        - { get_resource: SecurityGrupaProxy }
+        - { get_resource: SecurityGrupaApache }
         
   Apache:
     type: OS::Nova::Server
@@ -171,4 +198,4 @@ resources:
       user_data: |
         #!/bin/bash
         apt-get update -y
-        apt-get install apache2
+        apt-get install apache2 -y
