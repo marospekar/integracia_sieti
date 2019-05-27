@@ -1,0 +1,161 @@
+heat_template_version: rocky
+
+description: template_skuska_IS
+
+parameters:
+  NetName:
+    description: MenoSiete
+    type: string
+    default: mojaSiet
+
+  availabilityZone:
+    type: string
+    label: AvailabilityZona
+    default: compute1
+
+  PrivateSubnetCidr1:
+    type: string
+    label: CIDR1
+    default: 10.1.0.0/24
+
+  PrivateSubnetCidr2:
+    type: string
+    label: CIDR2
+    default: 10.2.0.0/24
+
+  RouterName:
+    type: string
+    label: Router name
+    default: Routerik
+
+resources:
+
+  Net:
+    type: OS::Neutron::Net
+    properties:
+      admin_state_up: True
+      name: { get_param: NetName }
+      shared: False
+
+  Router:
+    type: OS::Neutron::Router
+    properties:
+      admin_state_up: True
+      name: { get_param: RouterName }
+      external_gateway_info: {
+        enable_snat: True,
+        network: ext-net
+      }
+
+  PrivateSubnet1:
+    type: OS::Neutron::Subnet
+    properties:
+      name: Subnet1
+      cidr: { get_param: PrivateSubnetCidr1 }
+      dns_nameservers:
+        - 8.8.8.8
+        - 8.8.4.4
+      enable_dhcp: True
+      network: { get_resource: Net }
+
+  PrivateSubnet2:
+    type: OS::Neutron::Subnet
+    properties:
+      name: Subnet2
+      cidr: { get_param: PrivateSubnetCidr2 }
+      dns_nameservers:
+        - 8.8.8.8
+        - 8.8.4.4
+      enable_dhcp: True
+      network: { get_resource: Net }
+
+  RouterPort1:
+    type: OS::Neutron::Port
+    properties:
+      name: RouterPort1
+      fixed_ips:
+        - ip_address: 10.1.0.1
+      network: { get_resource: Net }
+
+  RouterPort2:
+    type: OS::Neutron::Port
+    properties:
+      name: RouterPort2
+      fixed_ips:
+        - ip_address: 10.2.0.1
+      network: { get_resource: Net }
+
+  RouterInterface1:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: { get_resource: Router }
+      port: { get_resource: RouterPort1 }
+
+  RouterInterface2:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: { get_resource: Router }
+      port: { get_resource: RouterPort2 }
+
+  InternalSecurityGroup:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: InternalSecurityGroup
+      description: InternalSecurityGroup
+      rules: [
+      {direction: ingress, ethertype: IPv4,  protocol: tcp, port_range_min: 22, port_range_max: 22, remote_ip_prefix: 10.0.0.0/14},
+      {direction: ingress, ethertype: IPv4, protocol: icmp, remote_ip_prefix: 10.0.0.0/14},
+      {direction: egress, ethertype: IPv4, protocol: tcp, port_range_min: 1, port_range_max: 65535, remote_ip_prefix: 10.0.0.0/14},
+      {direction: egress, ethertype: IPv4, protocol: udp, port_range_min: 1, port_range_max: 65535, remote_ip_prefix: 10.0.0.0/14},
+      {direction: egress, ethertype: IPv4, protocol: icmp, remote_ip_prefix: 10.0.0.0/14}
+      ]
+
+  server1port:
+    type: OS::Neutron::Port
+    properties:
+      name: Server1_Port
+      fixed_ips:
+        - ip_address: 10.1.0.10
+      security_groups:
+        - { get_resource: InternalSecurityGroup }
+      network: { get_resource: Net }
+
+  server2port:
+    type: OS::Neutron::Port
+    properties:
+      name: Server2_Port
+      fixed_ips:
+        - ip_address: 10.2.0.20
+      security_groups:
+        - { get_resource: InternalSecurityGroup }
+      network: { get_resource: Net }
+
+  server1:
+    type: OS::Nova::Server
+    properties:
+      name: Server1
+      image: Debian_9.5.0_Openstack
+      flavor: linux
+      user_data_update_policy: REPLACE
+      networks:
+        - port: { get_resource: server1port }
+      user_data_format: RAW
+      user_data: |
+        #!/bin/bash
+        apt-get update -y
+        apt-get install mc
+
+  server2:
+    type: OS::Nova::Server
+    properties:
+      name: Server2
+      image: Debian_9.5.0_Openstack
+      flavor: linux
+      user_data_update_policy: REPLACE
+      networks:
+        - port: { get_resource: server2port }
+      user_data_format: RAW
+      user_data: |
+        #!/bin/bash
+        apt-get update -y
+        apt-get install mc
